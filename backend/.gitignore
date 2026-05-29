@@ -1,0 +1,75 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.staging
+
+# Python 
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# uv 
+.uv/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Alembic  
+backend/db/migrations/versions/*.pyc
+
+# Vector DB
+qdrant_storage/
+
+# Logs
+*.log
+logs/
+
+# AWS
+.aws/
+*.pem
+*.key
+
+# Docker
+docker-compose.override.yml
+
+# IDE 
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Next.js (Frontend) 
+frontend/.next/
+frontend/node_modules/
+frontend/.env.local
+frontend/out/
+frontend/build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Misc
+*.bak
+*.tmp
+.cache/
