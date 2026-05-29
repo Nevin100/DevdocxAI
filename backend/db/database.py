@@ -4,6 +4,8 @@ from config import get_settings
 
 settings = get_settings()
 
+connect_args = {"ssl": "require"} if settings.DATABASE_SSL else {}
+
 # Engine
 engine = create_async_engine(
     settings.DATABASE_URL,
@@ -12,7 +14,8 @@ engine = create_async_engine(
     max_overflow=20, # The maximum number of connections to allow in overflow (connections that can be created beyond the pool_size)
     pool_timeout=30, # The time to wait for a connection from the pool
     pool_recycle=1800, # The time to recycle a connection
-    pool_pre_ping=True # Test connections before use
+    pool_pre_ping=True, # Test connections before use
+    connect_args=connect_args 
 )
 
 # Session Factory

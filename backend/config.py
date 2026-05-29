@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     # Database:
     DATABASE_URL: str
+    DATABASE_ECHO: bool = False
+    DATABASE_SSL: bool = False   # dev=False, prod=True (Neon)
 
     # JWT:
     JWT_SECRET_KEY: str
