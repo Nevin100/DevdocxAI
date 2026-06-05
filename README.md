@@ -276,7 +276,7 @@ User
 
 Following the build in public on dev.to:
 
-- [Part 1 — Foundation: Backend, Auth, DB, GitHub OAuth, MCP](https://dev.to) ← Live
+- [Part 1 — Foundation: Backend, Auth, DB, GitHub OAuth, MCP](https://dev.to/nevin100/building-devdocai-an-ai-that-writes-your-docs-part-1-foundation-5cjh) 
 - Part 2 — LangGraph Core ← Coming soon
 - Part 3 — Agents ← Coming soon
 - Part 4 — Webhooks + RAG ← Coming soon
