@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 # This configuration class uses Pydantic's BaseSettings to load environment variables and provide type validation.
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # GitHub OAuth:
     GITHUB_CLIENT_ID: str
     GITHUB_CLIENT_SECRET: str
-    GITHUB_REDIRECT_URL: str
+    GITHUB_REDIRECT_URI: str
 
     # LLM 
     GROQ_API_KEY: str
@@ -57,10 +57,12 @@ class Settings(BaseSettings):
     # Frontend Url:
     FRONTEND_URL: str = "http://localhost:3000"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"  # ← yeh add karo
+    )
 
 # Use LRU cache to ensure that settings are loaded only once and reused across the application
 @lru_cache()

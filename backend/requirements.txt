@@ -14,7 +14,7 @@ python-multipart==0.0.9
 cryptography==43.0.1
 
 # Config 
-pydantic==2.9.2
+pydantic[email]==2.9.2
 pydantic-settings==2.5.2
 python-dotenv==1.0.1
 
