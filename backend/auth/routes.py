@@ -3,7 +3,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import get_db
 from auth.jwt import get_current_user_id
-from schemas.auth_schema import RegisterRequest, LoginRequest, TokenResponse, UserResponse
+from schemas.auth_schema import (
+    RegisterRequest, LoginRequest,
+    TokenResponse, UserResponse,
+    GithubCallbackRequest, GithubOAuthUrlResponse
+)
 from services.auth_service import AuthService
 
 router = APIRouter()
@@ -26,3 +30,15 @@ async def get_me(
     db: AsyncSession = Depends(get_db)
 ):
     return await AuthService.get_me(user_id, db)
+
+# 4. GitHub OAuth URL
+@router.get("/github", response_model=GithubOAuthUrlResponse)
+async def github_oauth_url():
+    """Frontend calls this → gets GitHub redirect URL"""
+    return AuthService.get_github_url()
+ 
+@router.post("/github/callback", response_model=TokenResponse)
+async def github_callback(body: GithubCallbackRequest, db: AsyncSession = Depends(get_db)):
+    """GitHub redirects here with code → returns JWT"""
+    return await AuthService.github_callback(body.code, db)
+

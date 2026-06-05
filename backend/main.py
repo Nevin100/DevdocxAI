@@ -8,6 +8,9 @@ from db.database import init_db
 
 settings = get_settings()
 
+# importing routes :
+from auth.routes import router as auth_router
+
 # Langchain Tracing :
 os.environ["LANGCHAIN_TRACING_V2"] = str(settings.LANGCHAIN_TRACING_V2).lower()
 os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
@@ -50,3 +53,6 @@ async def health_check():
         "app":settings.APP_NAME,
         "version":settings.APP_VERSION
     }
+
+# Include Routers
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
