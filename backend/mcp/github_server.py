@@ -1,0 +1,169 @@
+import base64
+from github import Github, GithubException
+from langchain.tools import tool
+from utils.encryption import decrypt
+
+# Helper function to create GitHub client with decrypted token
+def get_github_client(encrypted_token: str) -> Github:
+    """Create GitHub client using user's decrypted access token"""
+    token = decrypt(encrypted_token)
+    return Github(token)
+
+#  Tool 1: List repo contents 
+@tool
+def get_repo_contents(encrypted_token: str, repo_full_name: str, path: str = "") -> dict:
+    """
+    List files and folders at a given path in the repo.
+    Example: path="" returns root, path="src" returns src/ contents.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        repo = client.get_repo(repo_full_name)
+        contents = repo.get_contents(path)
+
+        return {
+            "path": path or "/",
+            "items": [
+                {
+                    "name": item.name,
+                    "path": item.path,
+                    "type": item.type, 
+                    "size": item.size,
+                }
+                for item in contents
+            ]
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+# Tool 2: Get file content 
+@tool
+def get_file_content(encrypted_token: str, repo_full_name: str, file_path: str) -> dict:
+    """
+    Get the decoded text content of a single file.
+    Used by codebase_parser agent to read source files.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        repo = client.get_repo(repo_full_name)
+        file = repo.get_contents(file_path)
+
+        content = base64.b64decode(file.content).decode("utf-8")
+
+        return {
+            "file_path": file_path,
+            "content": content,
+            "sha": file.sha, 
+            "size": file.size,
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+# Tool 3: List branches 
+@tool
+def list_branches(encrypted_token: str, repo_full_name: str) -> dict:
+    """
+    List all branches in the repo.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        repo = client.get_repo(repo_full_name)
+        branches = repo.get_branches()
+
+        return {
+            "branches": [branch.name for branch in branches]
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+# Tool 4: Get PR details 
+@tool
+def get_pr_details(encrypted_token: str, repo_full_name: str, pr_number: int) -> dict:
+    """
+    Get details of a specific pull request.
+    Used by pr_watcher agent to know which files changed.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        repo = client.get_repo(repo_full_name)
+        pr = repo.get_pull(pr_number)
+
+        changed_files = [
+            {
+                "filename": f.filename,
+                "status": f.status,      # "added", "modified", "removed"
+                "changes": f.changes,
+            }
+            for f in pr.get_files()
+        ]
+
+        return {
+            "pr_number": pr.number,
+            "title": pr.title,
+            "state": pr.state,
+            "base_branch": pr.base.ref,
+            "head_branch": pr.head.ref,
+            "merged": pr.merged,
+            "changed_files": changed_files,
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+# Tool 5: Get repo metadata 
+@tool
+def get_repo_info(encrypted_token: str, repo_full_name: str) -> dict:
+    """
+    Get basic repo metadata — name, description, language, default branch.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        repo = client.get_repo(repo_full_name)
+
+        return {
+            "name": repo.name,
+            "full_name": repo.full_name,
+            "description": repo.description,
+            "language": repo.language,
+            "default_branch": repo.default_branch,
+            "stars": repo.stargazers_count,
+            "private": repo.private,
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
+# Tool 6: List Python files recursively 
+@tool
+def list_python_files(encrypted_token: str, repo_full_name: str, path: str = "") -> dict:
+    """
+    Recursively list all .py files in the repo.
+    Used by codebase_parser to know which files to parse.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        repo = client.get_repo(repo_full_name)
+
+        python_files = []
+
+        def scan(current_path: str):
+            contents = repo.get_contents(current_path)
+            for item in contents:
+                if item.type == "dir":
+                    scan(item.path)  # recurse into subdirectory
+                elif item.name.endswith(".py"):
+                    python_files.append(item.path)
+
+        scan(path)
+
+        return {"python_files": python_files, "total": len(python_files)}
+    except GithubException as e:
+        return {"error": str(e)}
+
+# All tools list (used by LangGraph agents)
+GITHUB_TOOLS = [
+    get_repo_contents,
+    get_file_content,
+    list_branches,
+    get_pr_details,
+    get_repo_info,
+    list_python_files,
+]
