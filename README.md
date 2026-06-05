@@ -1,4 +1,4 @@
-# DevDocAI 🤖📄
+# DevDocxAI 🤖📄
 
 > A production-grade multi-agent LangGraph system that automatically generates and updates engineering documentation from your GitHub codebase.
 
