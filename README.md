@@ -1,6 +1,6 @@
 # DevDocxAI 🤖📄
 
-> A production-grade multi-agent LangGraph system that automatically generates and updates engineering documentation from your GitHub codebase.
+>DevDocxAi is a production-grade multi-agent LangGraph system that automatically generates and updates engineering documentation from your GitHub codebase.
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green?style=flat-square&logo=fastapi)
