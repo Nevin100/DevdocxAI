@@ -1,0 +1,141 @@
+import uuid
+from langchain_groq import ChatGroq
+from langchain.prompts import ChatPromptTemplate
+from graph.state import DevDocState
+from config import get_settings
+
+settings = get_settings()
+
+# Groq LLM client
+llm = ChatGroq(
+    api_key=settings.GROQ_API_KEY,
+    model=settings.GROQ_MODEL,
+    temperature=0.3,   # low temp = consistent, structured output
+)
+
+# Prompt template for doc generation
+DOC_PROMPT = ChatPromptTemplate.from_messages([
+    ("system", """You are an expert technical writer specializing in Python documentation.
+Generate clear, structured Markdown documentation for the given Python module.
+
+Follow this structure:
+# Module Name
+
+Brief description of what this module does.
+
+## Classes
+For each class: description, attributes, methods with parameters and return types.
+
+## Functions
+For each function: description, parameters, return type, example usage.
+
+## Dependencies
+Key imports and what they're used for.
+
+Keep it developer-friendly. Be concise but complete.
+If dev_notes are provided, incorporate that feedback into the documentation."""),
+
+    ("human", """Generate documentation for this Python module:
+
+**File:** {file_path}
+**Module:** {module_name}
+
+**Module Docstring:** {docstring}
+
+**Classes:**
+{classes}
+
+**Functions:**
+{functions}
+
+**Imports:**
+{imports}
+
+{dev_notes_section}
+
+Generate the Markdown documentation now:""")
+])
+
+# Helper functions to format AST data for the prompt
+def format_classes(classes: list) -> str:
+    """Format class data for the prompt"""
+    if not classes:
+        return "None"
+
+    result = []
+    for cls in classes:
+        methods_str = ", ".join(m["name"] for m in cls.get("methods", []))
+        result.append(
+            f"- {cls['name']}: {cls.get('docstring', 'No docstring')} | Methods: {methods_str or 'none'}"
+        )
+    return "\n".join(result)
+
+# Helper function to format functions for the prompt
+def format_functions(functions: list) -> str:
+    """Format function data for the prompt"""
+    if not functions:
+        return "None"
+
+    result = []
+    for fn in functions:
+        args_str = ", ".join(fn.get("args", []))
+        result.append(
+            f"- {fn['name']}({args_str}): {fn.get('docstring', 'No docstring')}"
+        )
+    return "\n".join(result)
+
+# LangGraph node — generates structured Markdown docs for each parsed module.
+async def doc_generator_node(state: DevDocState) -> dict:
+    """
+    LangGraph node — generates structured Markdown docs for each parsed module.
+
+    Steps:
+    1. For each parsed_module from codebase_parser
+    2. Build prompt with AST data
+    3. Call Groq LLM
+    4. Return generated_docs list
+
+    If review_status is "rejected", uses dev_notes as feedback for regeneration.
+    """
+    print(f"📝 Generating docs for {len(state.parsed_modules)} modules")
+
+    # If rejected by dev, include their feedback
+    dev_notes_section = ""
+    if state.review_status == "rejected" and state.dev_notes:
+        dev_notes_section = f"**Dev Feedback (incorporate this):** {state.dev_notes}"
+
+    generated_docs = []
+
+    for module in state.parsed_modules:
+        if "error" in module:
+            print(f" Skipping errored module: {module.get('file_path')}")
+            continue
+
+        print(f"🤖 Generating docs for: {module['file_path']}")
+
+        # Build prompt
+        chain = DOC_PROMPT | llm
+
+        response = await chain.ainvoke({
+            "file_path": module["file_path"],
+            "module_name": module["module_name"],
+            "docstring": module.get("docstring") or "No module docstring",
+            "classes": format_classes(module.get("classes", [])),
+            "functions": format_functions(module.get("functions", [])),
+            "imports": ", ".join(module.get("imports", [])) or "None",
+            "dev_notes_section": dev_notes_section,
+        })
+
+        generated_docs.append({
+            "doc_id": str(uuid.uuid4()),
+            "file_path": module["file_path"],
+            "module_name": module["module_name"],
+            "content": response.content,
+        })
+
+        print(f"Docs generated: {module['file_path']}")
+
+    return {
+        "generated_docs": generated_docs,
+        "current_step": "doc_generator",
+    }
