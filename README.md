@@ -264,8 +264,8 @@ User
 |---|---|---|
 | **Phase 1** | Backend Foundation (FastAPI, DB, Auth, JWT) | ✅ Complete |
 | **Phase 2** | GitHub OAuth + MCP Server | ✅ Complete |
-| **Phase 3** | LangGraph Core (State, Pipeline, HITL) | 🔨 In Progress |
-| **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | 🔜 Soon |
+| **Phase 3** | LangGraph Core (State, Pipeline, HITL) | ✅ Complete |
+| **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | ✅ Complete |
 | **Phase 5** | Webhooks + Redis Cache | 🔜 Soon |
 | **Phase 6** | Next.js Frontend | 🔜 Soon |
 | **Phase 7** | Docker + ECR/ECS Fargate + CI/CD | 🔜 Soon |
