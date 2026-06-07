@@ -262,10 +262,10 @@ User
 
 | Phase | What | Status |
 |---|---|---|
-| **Phase 1** | Backend Foundation (FastAPI, DB, Auth, JWT) | ✅ Complete |
-| **Phase 2** | GitHub OAuth + MCP Server | ✅ Complete |
-| **Phase 3** | LangGraph Core (State, Pipeline, HITL) | ✅ Complete |
-| **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | ✅ Complete |
+| **Phase 1** | Backend Foundation (FastAPI, DB, Auth, JWT) | ✅ Completed |
+| **Phase 2** | GitHub OAuth + MCP Server | ✅ Completed |
+| **Phase 3** | LangGraph Core (State, Pipeline, HITL) | ✅ Completed |
+| **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | ✅ Completed |
 | **Phase 5** | Webhooks + Redis Cache | 🔜 Soon |
 | **Phase 6** | Next.js Frontend | 🔜 Soon |
 | **Phase 7** | Docker + ECR/ECS Fargate + CI/CD | 🔜 Soon |
@@ -277,11 +277,7 @@ User
 Following the build in public on dev.to:
 
 - [Part 1 — Foundation: Backend, Auth, DB, GitHub OAuth, MCP](https://dev.to/nevin100/building-devdocai-an-ai-that-writes-your-docs-part-1-foundation-5cjh) 
-- Part 2 — LangGraph Core ← Coming soon
-- Part 3 — Agents ← Coming soon
-- Part 4 — Webhooks + RAG ← Coming soon
-- Part 5 — Frontend ← Coming soon
-- Part 6 — DevOps + Deploy ← Coming soon
+- [Part 2 — LangGraph Core + Agents + RAG](https://dev.to/nevin100/-building-devdocai-an-ai-that-writes-your-docs-automatically-part-2-langgraph-core-agents--3j27) 
 
 ---
 
