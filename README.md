@@ -158,7 +158,7 @@ Database
 ### Prerequisites
 
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) — fast Python package manager
+- [uv](https://docs.astral.sh/uv/) — fast Python package manager jus like pip
 - Docker (for local PostgreSQL)
 - A GitHub OAuth App ([create one here](https://github.com/settings/developers))
 
