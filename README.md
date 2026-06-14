@@ -107,22 +107,23 @@ devdocai/
 │   │   └── encryption.py           ← Fernet encryption for tokens
 │   ├── mcp/
 │   │   └── github_server.py        ← GitHub tools for LangGraph agents
-│   ├── agents/                     ← Phase 4
+│   ├── agents/
 │   │   ├── codebase_parser.py
 │   │   ├── doc_generator.py
 │   │   ├── brave_researcher.py
+│   │   ├── doc_publisher.py
 │   │   └── onboarding_chatbot.py
-│   ├── graph/                      ← Phase 3
+│   ├── graph/
 │   │   ├── state.py
 │   │   ├── pipeline.py
 │   │   └── hitl.py
-│   ├── webhooks/                   ← Phase 5
-│   │   └── github_pr.py
-│   ├── cache/                      ← Phase 5
-│   │   └── redis_client.py
-│   ├── vectorstore/                ← Phase 4
+│   ├── webhooks/
+│   │   └── github_pr.py            ← PR merge webhook handler
+│   ├── cache/
+│   │   └── redis_client.py         ← Upstash Redis caching
+│   ├── vectorstore/
 │   │   ├── embeddings.py
-│   │   └── qdrant_client.py
+│   │   └── qdrant_store.py
 │   ├── config.py                   ← all env vars, pydantic-settings
 │   └── main.py                     ← FastAPI app entry point
 ├── frontend/                       ← Phase 6
@@ -158,7 +159,7 @@ Database
 ### Prerequisites
 
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) — fast Python package manager jus like pip
+- [uv](https://docs.astral.sh/uv/) — fast Python package manager just like pip
 - Docker (for local PostgreSQL)
 - A GitHub OAuth App ([create one here](https://github.com/settings/developers))
 
@@ -240,10 +241,10 @@ http://localhost:8000/docs
 | `LANGCHAIN_API_KEY` | ✅ | From [smith.langchain.com](https://smith.langchain.com) |
 | `GITHUB_CLIENT_ID` | ✅ | GitHub OAuth App |
 | `GITHUB_CLIENT_SECRET` | ✅ | GitHub OAuth App |
-| `COHERE_API_KEY` | ⏳ Phase 4 | For embeddings |
-| `BRAVE_SEARCH_API_KEY` | ⏳ Phase 4 | For brave researcher agent |
-| `REDIS_URL` | ⏳ Phase 5 | Upstash Redis |
-| `AWS_ACCESS_KEY_ID` | ⏳ Phase 5 | S3 storage |
+| `COHERE_API_KEY` | ✅ | From [cohere.com](https://cohere.com) |
+| `BRAVE_SEARCH_API_KEY` | ✅ | From [brave.com/search/api](https://brave.com/search/api) |
+| `REDIS_URL` | ✅ | Upstash Redis URL |
+| `AWS_ACCESS_KEY_ID` | ⏳ Phase 7 | S3 storage |
 
 ---
 
@@ -262,12 +263,12 @@ User
 
 | Phase | What | Status |
 |---|---|---|
-| **Phase 1** | Backend Foundation (FastAPI, DB, Auth, JWT) | ✅ Completed |
-| **Phase 2** | GitHub OAuth + MCP Server | ✅ Completed |
-| **Phase 3** | LangGraph Core (State, Pipeline, HITL) | ✅ Completed |
-| **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | ✅ Completed |
-| **Phase 5** | Webhooks + Redis Cache | 🔜 Soon |
-| **Phase 6** | Next.js Frontend | 🔜 Soon |
+| **Phase 1** | Backend Foundation (FastAPI, DB, Auth, JWT) | ✅ Complete |
+| **Phase 2** | GitHub OAuth + MCP Server | ✅ Complete |
+| **Phase 3** | LangGraph Core (State, Pipeline, HITL) | ✅ Complete |
+| **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | ✅ Complete |
+| **Phase 5** | Webhooks + Redis Cache | ✅ Complete |
+| **Phase 6** | Next.js Frontend | 🔨 In Progress |
 | **Phase 7** | Docker + ECR/ECS Fargate + CI/CD | 🔜 Soon |
 
 ---
@@ -276,20 +277,15 @@ User
 
 Following the build in public on dev.to:
 
-- [Part 1 — Foundation: Backend, Auth, DB, GitHub OAuth, MCP](https://dev.to/nevin100/building-devdocai-an-ai-that-writes-your-docs-part-1-foundation-5cjh) 
-- [Part 2 — LangGraph Core + Agents + RAG](https://dev.to/nevin100/-building-devdocai-an-ai-that-writes-your-docs-automatically-part-2-langgraph-core-agents--3j27) 
+- [Part 1 — Foundation: Backend, Auth, DB, GitHub OAuth, MCP](https://dev.to/nevin100/building-devdocai-an-ai-that-writes-your-docs-part-1-foundation-5cjh)
+- [Part 2 — LangGraph Core + Agents + RAG](https://dev.to/nevin100/-building-devdocai-an-ai-that-writes-your-docs-automatically-part-2-langgraph-core-agents--3j27)
+- [Part 3 — Webhooks + Redis Cache](https://dev.to/nevin100/building-devdocai-a-production-multi-agent-langgraph-system-part-3-github-webhooks-redis-1mgk)
 
 ---
 
 ## 🤝 Contributing
 
 This project is under active development. Feel free to open issues or PRs.
-
-<!-- ---
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details. -->
 
 ---
 
