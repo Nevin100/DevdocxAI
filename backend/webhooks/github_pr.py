@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, Request, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from db.database import AsyncSessionLocal
+from db.database import async_session_local
 from db.models import Repository, PipelineRun, User
 from graph.state import DevDocState
 from graph.pipeline import get_compiled_pipeline, run_pipeline
@@ -62,7 +62,7 @@ async def github_webhook(
 
     print(f"🔀 PR #{pr_number} merged in repo {github_repo_id}")
 
-    async with AsyncSessionLocal() as db:
+    async with async_session_local() as db:
         # Find repo in our DB
         result = await db.execute(
             select(Repository).where(Repository.github_repo_id == github_repo_id)

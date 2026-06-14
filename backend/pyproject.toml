@@ -28,4 +28,5 @@ dependencies = [
     "sqlalchemy[asyncio]==2.0.35",
     "uvicorn[standard]==0.30.6",
     "langgraph-checkpoint-postgres==2.0.10",
+    "psycopg[binary]==3.2.3",
 ]

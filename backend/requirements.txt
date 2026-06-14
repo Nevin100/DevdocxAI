@@ -6,6 +6,7 @@ uvicorn[standard]==0.30.6
 sqlalchemy[asyncio]==2.0.35
 asyncpg==0.29.0
 alembic==1.13.2
+psycopg[binary]==3.2.3
 
 # Auth 
 python-jose[cryptography]==3.3.0

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from graph.state import DevDocState
 from db.models import Document, DocStatus
 from vectorstore.qdrant_store import store_document
-from db.database import AsyncSessionLocal
+from db.database import async_session_local
 
 # This node is responsible for taking the enriched docs from the previous step and saving them to the database and vector store. It checks if a doc already exists for the given file path and repo, and either updates it or creates a new entry. After saving to the database, it also stores the document in Qdrant and saves the resulting vector ID back to the database.
 async def doc_publisher_node(state: DevDocState) -> dict:
@@ -23,7 +23,7 @@ async def doc_publisher_node(state: DevDocState) -> dict:
     published_doc_ids = []
     vector_ids = []
 
-    async with AsyncSessionLocal() as db:
+    async with async_session_local() as db:
         for doc in state.enriched_docs:
             # Check if doc already exists for this file (update) or create new
             result = await db.execute(
