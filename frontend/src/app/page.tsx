@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
-import PipelineStrip from "@/components/PipelineStrip";
+import Navbar from "@/src/components/Navbar";
+import PipelineStrip from "@/src/components/PipelineStrip";
 
 const STEPS = [
   {
@@ -151,6 +151,3 @@ export default function Home() {
     </main>
   );
 }
-```
-
-"next" bolo — File 5 (`Navbar.tsx`) deta hoon.
