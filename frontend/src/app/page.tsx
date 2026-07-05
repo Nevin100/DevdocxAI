@@ -146,7 +146,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-border px-6 py-8 text-center text-xs text-muted-2">
-        DevDocAI — built in public.
+        DevDocAI - built in public.
       </footer>
     </main>
   );
