@@ -11,6 +11,9 @@ settings = get_settings()
 # importing routes :
 from auth.routes import router as auth_router
 from webhooks.github_pr import router as webhook_router
+from repos.routes import router as repos_router
+from pipeline.routes import router as pipeline_router
+from chat.routes import router as chat_router
 
 # Langchain Tracing :
 os.environ["LANGCHAIN_TRACING_V2"] = str(settings.LANGCHAIN_TRACING_V2).lower()
@@ -59,3 +62,6 @@ async def health_check():
 # Include Routers
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(webhook_router, prefix="/webhooks", tags=["Webhooks"])
+app.include_router(repos_router, tags=["Repos"])
+app.include_router(pipeline_router, tags=["Pipeline"])
+app.include_router(chat_router, tags=["Chat"])
