@@ -54,4 +54,4 @@ async def run_pipeline_manually(
     user_id: uuid.UUID = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await RepoService.trigger_pipeline(repo_id, user_id, db
+    return await RepoService.trigger_pipeline(repo_id, user_id, db)
