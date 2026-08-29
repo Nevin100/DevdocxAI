@@ -268,7 +268,7 @@ User
 | **Phase 3** | LangGraph Core (State, Pipeline, HITL) | ✅ Complete |
 | **Phase 4** | Agents (Parser, Generator, Researcher, Chatbot) | ✅ Complete |
 | **Phase 5** | Webhooks + Redis Cache | ✅ Complete |
-| **Phase 6** | Next.js Frontend | 🔨 In Progress |
+| **Phase 6** | Next.js Frontend | 🔨 Completing!! |
 | **Phase 7** | Docker + ECR/ECS Fargate + CI/CD | 🔜 Soon |
 
 ---
@@ -280,7 +280,8 @@ Following the build in public on dev.to:
 - [Part 1 — Foundation: Backend, Auth, DB, GitHub OAuth, MCP](https://dev.to/nevin100/building-devdocai-an-ai-that-writes-your-docs-part-1-foundation-5cjh)
 - [Part 2 — LangGraph Core + Agents + RAG](https://dev.to/nevin100/-building-devdocai-an-ai-that-writes-your-docs-automatically-part-2-langgraph-core-agents--3j27)
 - [Part 3 — Webhooks + Redis Cache](https://dev.to/nevin100/building-devdocai-a-production-multi-agent-langgraph-system-part-3-github-webhooks-redis-1mgk)
-- [Part 4 — Coming Back, Closing Out the Backend, and Laying Down the Frontend ](https://dev.to/nevin100/building-devdocai-a-production-multi-agent-langgraph-system-part-4-coming-back-closing-out-5aa9)
+- [Part 4 — Coming Back, Closing Out the Backend, and Laying Down the Frontend](https://dev.to/nevin100/building-devdocai-a-production-multi-agent-langgraph-system-part-4-coming-back-closing-out-5aa9)
+- [Part 5 - Backend Closed Out, GitHub OAuth Working End-to-End](https://dev.to/nevin100/building-devdocai-a-production-multi-agent-langgraph-system-part-5-backend-closed-out-github-216o)
 
 ---
 
