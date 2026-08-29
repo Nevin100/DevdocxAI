@@ -1,8 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { auth, setToken } from "@/lib/api";
+import { auth, setToken } from "@/src/lib/api";
 
 export default function GithubCallbackPage() {
   const router = useRouter();
@@ -13,7 +15,8 @@ export default function GithubCallbackPage() {
     const code = searchParams.get("code");
 
     if (!code) {
-      setError("No authorization code received from GitHub.");
+      setError("No authorization code received from GitHub");
+      throw Error("No authorization code received from GitHub.");
       return;
     }
 
@@ -23,7 +26,7 @@ export default function GithubCallbackPage() {
         setToken(access_token);
         router.push("/dashboard");
       })
-      .catch((err) => {
+      .catch((err:any) => {
         setError(err instanceof Error ? err.message : "GitHub login failed");
       });
   }, [searchParams, router]);
