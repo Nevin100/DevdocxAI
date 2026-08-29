@@ -158,6 +158,33 @@ def list_python_files(encrypted_token: str, repo_full_name: str, path: str = "")
     except GithubException as e:
         return {"error": str(e)}
 
+@tool
+def list_user_repos(encrypted_token: str) -> dict:
+    """
+    List all repositories the authenticated user has access to.
+    Used to populate the "connect a repo" picker on the frontend.
+    """
+    try:
+        client = get_github_client(encrypted_token)
+        user = client.get_user()
+        repos = user.get_repos(sort="updated", direction="desc")
+
+        return {
+            "repos": [
+                {
+                    "github_repo_id": str(r.id),
+                    "full_name": r.full_name,
+                    "default_branch": r.default_branch,
+                    "private": r.private,
+                    "description": r.description,
+                    "language": r.language,
+                }
+                for r in repos[:50]   # cap to avoid huge payloads
+            ]
+        }
+    except GithubException as e:
+        return {"error": str(e)}
+
 # All tools list (used by LangGraph agents)
 GITHUB_TOOLS = [
     get_repo_contents,
@@ -166,4 +193,5 @@ GITHUB_TOOLS = [
     get_pr_details,
     get_repo_info,
     list_python_files,
+    list_user_repos,   
 ]
