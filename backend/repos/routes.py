@@ -12,14 +12,12 @@ from utils.encryption import decrypt
 
 router = APIRouter()
 
-
 @router.get("/repos", response_model=list[RepoResponse])
 async def list_repos(
     user_id: uuid.UUID = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     return await RepoService.list_repos(user_id, db)
-
 
 @router.get("/github/repos")
 async def list_github_repos(
@@ -42,7 +40,6 @@ async def list_github_repos(
         "encrypted_token": user.github_access_token,
     })
 
-
 @router.post("/repos/connect", response_model=RepoResponse, status_code=201)
 async def connect_repo(
     body: ConnectRepoRequest,
@@ -50,3 +47,11 @@ async def connect_repo(
     db: AsyncSession = Depends(get_db),
 ):
     return await RepoService.connect_repo(user_id, body, db)
+
+@router.post("/repos/{repo_id}/run")
+async def run_pipeline_manually(
+    repo_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await RepoService.trigger_pipeline(repo_id, user_id, db
