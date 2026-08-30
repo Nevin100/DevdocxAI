@@ -39,7 +39,6 @@ async def get_db():
     async with async_session_local() as session:
         try: 
             yield session
-            await session.commit() # Commit the transaction after yielding the session  
         except Exception as e:
             await session.rollback() # Rollback the transaction in case of an exception
             raise e
