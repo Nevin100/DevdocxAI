@@ -55,3 +55,11 @@ async def run_pipeline_manually(
     db: AsyncSession = Depends(get_db),
 ):
     return await RepoService.trigger_pipeline(repo_id, user_id, db)
+
+@router.get("/repos/{repo_id}/latest-thread")
+async def get_latest_thread(
+    repo_id: uuid.UUID,
+    user_id: uuid.UUID = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await RepoService.get_latest_thread(repo_id, user_id, db)

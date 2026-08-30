@@ -2,7 +2,8 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from db.models import Repository, RepoStatus
-
+from db.models import PipelineRun
+from sqlalchemy import select
 class RepoRepository:
     @staticmethod
     async def get_by_id(repo_id: uuid.UUID, db: AsyncSession) -> Repository | None:
@@ -24,6 +25,17 @@ class RepoRepository:
             .order_by(Repository.created_at.desc())
         )
         return list(result.scalars().all())
+
+    @staticmethod
+    async def get_latest_pipeline_run(repo_id: uuid.UUID, db: AsyncSession):
+        result = await db.execute(
+            select(PipelineRun)
+            .where(PipelineRun.repo_id == repo_id)
+            .order_by(PipelineRun.started_at.desc())
+            .limit(1)
+        )
+
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create(

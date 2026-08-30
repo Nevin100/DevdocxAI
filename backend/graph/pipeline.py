@@ -66,26 +66,33 @@ def build_chatbot_pipeline() -> StateGraph:
     return builder
 
 # Compile with PostgreSQL checkpointer
+_checkpointer_cm = None
+_checkpointer = None
+
 async def get_compiled_pipeline():
-    """
-    Compile both graphs with AsyncPostgresSaver checkpointer.
-    PostgresSaver saves full state after every node — enables HITL pause/resume.
-    """
-    async with await AsyncPostgresSaver.from_conn_string(
-        settings.DATABASE_URL.replace("+asyncpg", "")  # PostgresSaver uses psycopg, not asyncpg
-    ) as checkpointer:
-        await checkpointer.setup()  # creates checkpointing tables in DB
+    global _checkpointer_cm, _checkpointer
 
-        doc_graph = build_doc_pipeline().compile(
-            checkpointer=checkpointer,
-            interrupt_before=["human_review"],  # pause before HITL node
+    if _checkpointer is None:
+        psycopg_url = (
+            settings.DATABASE_URL
+            .replace("postgresql+asyncpg://", "postgresql://")
+            .replace("?ssl=require", "?sslmode=require")
         )
 
-        chatbot_graph = build_chatbot_pipeline().compile(
-            checkpointer=checkpointer
-        )
+        _checkpointer_cm = AsyncPostgresSaver.from_conn_string(psycopg_url)
+        _checkpointer = await _checkpointer_cm.__aenter__()
+        await _checkpointer.setup()
 
-        return doc_graph, chatbot_graph
+    doc_graph = build_doc_pipeline().compile(
+        checkpointer=_checkpointer,
+        interrupt_before=["human_review"],
+    )
+
+    chatbot_graph = build_chatbot_pipeline().compile(
+        checkpointer=_checkpointer
+    )
+
+    return doc_graph, chatbot_graph
 
 # Run helpers 
 async def run_pipeline(state: DevDocState, doc_graph):

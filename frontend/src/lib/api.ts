@@ -36,6 +36,32 @@ async function request<T>(
   return res.json();
 }
 
+// Types 
+export type Repo = {
+  id: string;
+  full_name: string;
+  default_branch: string;
+  status: string;
+  last_parsed_at: string | null;
+};
+
+export type GithubRepo = {
+  github_repo_id: string;
+  full_name: string;
+  default_branch: string;
+  private: boolean;
+  description: string | null;
+  language: string | null;
+};
+
+export type PipelineState = {
+  thread_id: string;
+  current_step: string;
+  review_status: string;
+  generated_docs: { file_path: string; module_name: string; content: string }[];
+  completed: boolean;
+};
+
 // Auth 
 export const auth = {
   register: (email: string, password: string) =>
@@ -64,24 +90,48 @@ export const auth = {
     }),
 };
 
-// Chat
-export const chat = {
-  ask: (repoId: string, query: string) =>
-    request<{ chat_response: string }>("/chat/ask", {
+// Repos 
+export const repos = {
+  list: () => request<Repo[]>("/repos"),
+
+  githubList: () => request<{ repos: GithubRepo[]; error?: string }>("/github/repos"),
+
+  connect: (body: { github_repo_id: string; full_name: string; default_branch: string }) =>
+    request<Repo>("/repos/connect", {
       method: "POST",
-      body: JSON.stringify({ repo_id: repoId, chat_query: query }),
+      body: JSON.stringify(body),
     }),
+
+  run: (repoId: string) =>
+    request<{ status: string; thread_id: string }>(`/repos/${repoId}/run`, {
+      method: "POST",
+    }),
+
+  latestThread: (repoId: string) =>
+    request<{ thread_id: string }>(`/repos/${repoId}/latest-thread`),
 };
 
-// HITL Review :
-export const review = {
-  submit: (threadId: string, reviewStatus: "approved" | "rejected", devNotes: string) =>
-    request<{ status: string }>("/pipeline/review", {
+// Pipeline (HITL review) 
+export const pipeline = {
+  getState: (threadId: string) =>
+    request<PipelineState>(`/pipeline/${threadId}/state`),
+
+  review: (threadId: string, reviewStatus: "approved" | "rejected", devNotes: string) =>
+    request<{ status: string; thread_id: string }>("/pipeline/review", {
       method: "POST",
       body: JSON.stringify({
         thread_id: threadId,
         review_status: reviewStatus,
         dev_notes: devNotes,
       }),
+    }),
+};
+
+// Chat (onboarding chatbot) 
+export const chat = {
+  ask: (repoId: string, query: string) =>
+    request<{ chat_response: string }>("/chat/ask", {
+      method: "POST",
+      body: JSON.stringify({ repo_id: repoId, chat_query: query }),
     }),
 };

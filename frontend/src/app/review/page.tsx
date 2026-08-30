@@ -1,41 +1,50 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { review } from "@/src/lib/api";
-
-const SAMPLE_DOCS = [
-  {
-    file_path: "src/utils/parser.py",
-    module_name: "utils.parser",
-    content:
-      "# Parser\n\nParses source files into an AST and extracts classes, functions,\nand imports for downstream doc generation.\n\n## Functions\n\n- parse_python_file(file_path, source_code) — walks the AST and returns\n  a structured dict of classes, functions and imports.",
-  },
-  {
-    file_path: "src/services/auth_service.py",
-    module_name: "services.auth_service",
-    content:
-      "# Auth Service\n\nHandles registration, login and GitHub OAuth token exchange.\nDelegates all queries to UserRepository — no raw SQL here.",
-  },
-];
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { pipeline, type PipelineState } from "@/src/lib/api";
 
 export default function ReviewPage() {
+  const searchParams = useSearchParams();
+  const threadId = searchParams.get("thread");
+
+  const [state, setState] = useState<PipelineState | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [notes, setNotes] = useState("");
-  const [threadId] = useState("sample-thread-id");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
 
-  const active = SAMPLE_DOCS[activeIdx];
+  useEffect(() => {
+    if (!threadId) {
+      setError("No pipeline thread specified.");
+      setLoading(false);
+      return;
+    }
+
+    pipeline
+      .getState(threadId)
+      .then(setState)
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load pipeline"))
+      .finally(() => setLoading(false));
+  }, [threadId]);
 
   async function handleDecision(decision: "approved" | "rejected") {
+    if (!threadId) return;
     setStatus("sending");
     try {
-      await review.submit(threadId, decision, notes);
+      await pipeline.review(threadId, decision, notes);
       setStatus("done");
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit review");
       setStatus("idle");
     }
   }
+
+  const docs = state?.generated_docs ?? [];
+  const active = docs[activeIdx];
 
   return (
     <main className="min-h-screen bg-bg">
@@ -45,10 +54,12 @@ export default function ReviewPage() {
             <span className="h-2 w-2 rounded-full bg-teal" />
             <span className="font-display text-lg font-semibold">DevDocAI</span>
           </Link>
-          <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber animate-pulse-dot" />
-            <span className="text-xs text-amber">Paused for review</span>
-          </div>
+          {state && (
+            <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber animate-pulse-dot" />
+              <span className="text-xs text-amber">{state.current_step}</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -58,7 +69,19 @@ export default function ReviewPage() {
           Nothing publishes until you approve. Reject with notes to send it back for a rewrite.
         </p>
 
-        {status === "done" ? (
+        {loading ? (
+          <p className="mt-8 text-sm text-muted">Loading pipeline state...</p>
+        ) : error ? (
+          <div className="mt-10 rounded-xl border border-border bg-surface p-8 text-center">
+            <p className="text-sm text-amber">{error}</p>
+            <Link
+              href="/dashboard"
+              className="mt-6 inline-block rounded-lg bg-teal px-5 py-2 text-sm font-medium text-bg"
+            >
+              Back to dashboard
+            </Link>
+          </div>
+        ) : status === "done" ? (
           <div className="mt-10 rounded-xl border border-border bg-surface p-8 text-center">
             <p className="font-display text-lg">Decision recorded</p>
             <p className="mt-1 text-sm text-muted">
@@ -71,11 +94,17 @@ export default function ReviewPage() {
               Back to dashboard
             </Link>
           </div>
+        ) : docs.length === 0 ? (
+          <div className="mt-10 rounded-xl border border-border bg-surface p-8 text-center">
+            <p className="text-sm text-muted">
+              No docs generated yet for this run — still at step:{" "}
+              <span className="font-mono text-ink">{state?.current_step}</span>
+            </p>
+          </div>
         ) : (
           <div className="mt-8 grid gap-6 lg:grid-cols-[220px_1fr]">
-            {/* File list */}
             <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
-              {SAMPLE_DOCS.map((doc, i) => (
+              {docs.map((doc, i) => (
                 <button
                   key={doc.file_path}
                   onClick={() => setActiveIdx(i)}
@@ -90,14 +119,13 @@ export default function ReviewPage() {
               ))}
             </div>
 
-            {/* Doc content + decision */}
             <div className="rounded-xl border border-border bg-surface p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="font-mono text-xs text-muted">{active.module_name}</span>
+                <span className="font-mono text-xs text-muted">{active?.module_name}</span>
               </div>
 
               <pre className="max-h-[360px] overflow-auto whitespace-pre-wrap rounded-lg bg-bg p-4 font-mono text-xs leading-relaxed text-muted">
-                {active.content}
+                {active?.content}
               </pre>
 
               <div className="mt-6">
@@ -109,7 +137,7 @@ export default function ReviewPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  placeholder="e.g. missing usage example for parse_python_file"
+                  placeholder="e.g. missing usage example"
                   className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
                 />
               </div>

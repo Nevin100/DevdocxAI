@@ -83,3 +83,21 @@ class RepoService:
         await run_pipeline(initial_state, doc_graph)
 
         return {"status": "pipeline_started", "thread_id": thread_id}
+
+    @staticmethod
+    async def get_latest_thread(repo_id: uuid.UUID, user_id: uuid.UUID, db: AsyncSession) -> dict:
+        repo = await RepoRepository.get_by_id(repo_id, db)
+        if not repo or repo.owner_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Repository not found",
+            )
+
+        run = await RepoRepository.get_latest_pipeline_run(repo_id, db)
+        if not run:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No pipeline run found for this repo yet",
+        )
+
+        return {"thread_id": run.thread_id}
