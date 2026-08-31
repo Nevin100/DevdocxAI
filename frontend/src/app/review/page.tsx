@@ -16,6 +16,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "done">("idle");
+  const [decision, setDecision] = useState<"approved" | "rejected" | null>(null);
 
   useEffect(() => {
     if (!threadId) {
@@ -31,11 +32,12 @@ export default function ReviewPage() {
       .finally(() => setLoading(false));
   }, [threadId]);
 
-  async function handleDecision(decision: "approved" | "rejected") {
+  async function handleDecision(d: "approved" | "rejected") {
     if (!threadId) return;
+    setDecision(d);
     setStatus("sending");
     try {
-      await pipeline.review(threadId, decision, notes);
+      await pipeline.review(threadId, d, notes);
       setStatus("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit review");
@@ -48,31 +50,38 @@ export default function ReviewPage() {
 
   return (
     <main className="min-h-screen bg-bg">
-      <header className="border-b border-border">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
+      {/* Header */}
+      <header className="sticky top-0 z-10 border-b border-border bg-bg/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/dashboard" className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-teal" />
-            <span className="font-display text-lg font-semibold">DevDocAI</span>
+            <span className="font-display text-base font-semibold">DevDocAI</span>
           </Link>
-          {state && (
-            <div className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1">
+          {state && !loading && (
+            <div className="flex items-center gap-1.5 rounded-full border border-amber/30 bg-amber/10 px-3 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-amber animate-pulse-dot" />
-              <span className="text-xs text-amber">{state.current_step}</span>
+              <span className="text-xs text-amber">Awaiting your review</span>
             </div>
           )}
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="font-display text-2xl font-semibold">Review generated docs</h1>
-        <p className="mt-1 text-sm text-muted">
-          Nothing publishes until you approve. Reject with notes to send it back for a rewrite.
-        </p>
+      <div className="mx-auto max-w-6xl px-6 py-8">
+        {/* Loading */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="flex gap-1.5">
+              <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-teal" />
+              <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-teal [animation-delay:0.2s]" />
+              <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-teal [animation-delay:0.4s]" />
+            </div>
+            <p className="mt-4 text-sm text-muted">Loading pipeline state...</p>
+          </div>
+        )}
 
-        {loading ? (
-          <p className="mt-8 text-sm text-muted">Loading pipeline state...</p>
-        ) : error ? (
-          <div className="mt-10 rounded-xl border border-border bg-surface p-8 text-center">
+        {/* Error */}
+        {!loading && error && (
+          <div className="mx-auto mt-16 max-w-md rounded-xl border border-border bg-surface p-8 text-center">
             <p className="text-sm text-amber">{error}</p>
             <Link
               href="/dashboard"
@@ -81,11 +90,25 @@ export default function ReviewPage() {
               Back to dashboard
             </Link>
           </div>
-        ) : status === "done" ? (
-          <div className="mt-10 rounded-xl border border-border bg-surface p-8 text-center">
-            <p className="font-display text-lg">Decision recorded</p>
+        )}
+
+        {/* Done */}
+        {!loading && !error && status === "done" && (
+          <div className="mx-auto mt-16 max-w-md rounded-xl border border-border bg-surface p-8 text-center">
+            <div
+              className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${
+                decision === "approved" ? "bg-teal/15 text-teal" : "bg-amber/15 text-amber"
+              }`}
+            >
+              {decision === "approved" ? "✓" : "↺"}
+            </div>
+            <p className="font-display text-lg">
+              {decision === "approved" ? "Docs approved" : "Sent back for a rewrite"}
+            </p>
             <p className="mt-1 text-sm text-muted">
-              The pipeline has resumed. Head back to the dashboard to track progress.
+              {decision === "approved"
+                ? "Publishing to your docs store now."
+                : "The generator will incorporate your notes and try again."}
             </p>
             <Link
               href="/dashboard"
@@ -94,72 +117,101 @@ export default function ReviewPage() {
               Back to dashboard
             </Link>
           </div>
-        ) : docs.length === 0 ? (
-          <div className="mt-10 rounded-xl border border-border bg-surface p-8 text-center">
+        )}
+
+        {/* Empty */}
+        {!loading && !error && status !== "done" && docs.length === 0 && (
+          <div className="mx-auto mt-16 max-w-md rounded-xl border border-border bg-surface p-8 text-center">
             <p className="text-sm text-muted">
-              No docs generated yet for this run — still at step:{" "}
+              No docs generated yet — pipeline is at step{" "}
               <span className="font-mono text-ink">{state?.current_step}</span>
             </p>
           </div>
-        ) : (
-          <div className="mt-8 grid gap-6 lg:grid-cols-[220px_1fr]">
-            <div className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
-              {docs.map((doc, i) => (
-                <button
-                  key={doc.file_path}
-                  onClick={() => setActiveIdx(i)}
-                  className={`shrink-0 rounded-lg border px-3 py-2.5 text-left text-xs font-mono transition ${
-                    i === activeIdx
-                      ? "border-teal bg-surface text-ink"
-                      : "border-border text-muted hover:border-muted-2"
-                  }`}
-                >
-                  {doc.file_path}
-                </button>
-              ))}
+        )}
+
+        {/* Main review UI */}
+        {!loading && !error && status !== "done" && docs.length > 0 && (
+          <>
+            <div className="mb-6">
+              <h1 className="font-display text-2xl font-semibold">Review generated docs</h1>
+              <p className="mt-1 text-sm text-muted">
+                {docs.length} file{docs.length !== 1 ? "s" : ""} documented. Approve to
+                publish, or reject with notes to regenerate.
+              </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <span className="font-mono text-xs text-muted">{active?.module_name}</span>
+            <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+              {/* File list */}
+              <div className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:overflow-visible lg:pb-0">
+                {docs.map((doc, i) => (
+                  <button
+                    key={doc.file_path}
+                    onClick={() => setActiveIdx(i)}
+                    className={`shrink-0 rounded-lg border px-3 py-2.5 text-left text-xs font-mono transition ${
+                      i === activeIdx
+                        ? "border-teal bg-teal/10 text-ink"
+                        : "border-border text-muted hover:border-muted-2"
+                    }`}
+                  >
+                    <span className="block truncate lg:whitespace-normal">{doc.file_path}</span>
+                  </button>
+                ))}
               </div>
 
-              <pre className="max-h-[360px] overflow-auto whitespace-pre-wrap rounded-lg bg-bg p-4 font-mono text-xs leading-relaxed text-muted">
-                {active?.content}
-              </pre>
+              {/* Doc content */}
+              <div className="flex flex-col rounded-xl border border-border bg-surface">
+                <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                  <span className="font-mono text-xs text-muted">{active?.module_name}</span>
+                  <span className="font-mono text-[11px] text-muted-2">
+                    {activeIdx + 1} / {docs.length}
+                  </span>
+                </div>
 
-              <div className="mt-6">
-                <label htmlFor="notes" className="mb-1.5 block text-xs text-muted">
-                  Notes (used as feedback if rejected)
-                </label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  placeholder="e.g. missing usage example"
-                  className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
-                />
-              </div>
+                <div className="max-h-[420px] overflow-auto px-6 py-5">
+                  <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-muted">
+                    {active?.content}
+                  </pre>
+                </div>
 
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={() => handleDecision("approved")}
-                  disabled={status === "sending"}
-                  className="flex-1 rounded-lg bg-teal py-2.5 text-sm font-medium text-bg transition hover:bg-teal/90 disabled:opacity-60"
-                >
-                  {status === "sending" ? "Sending..." : "Approve & publish"}
-                </button>
-                <button
-                  onClick={() => handleDecision("rejected")}
-                  disabled={status === "sending"}
-                  className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink transition hover:border-amber hover:text-amber disabled:opacity-60"
-                >
-                  Reject & regenerate
-                </button>
+                <div className="border-t border-border px-6 py-5">
+                  <label htmlFor="notes" className="mb-1.5 block text-xs text-muted">
+                    Notes <span className="text-muted-2">— used as feedback if rejected</span>
+                  </label>
+                  <textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. missing a usage example, wrong parameter description..."
+                    className="w-full resize-none rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-teal"
+                  />
+
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                    <button
+                      onClick={() => handleDecision("approved")}
+                      disabled={status === "sending"}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-teal py-2.5 text-sm font-medium text-bg transition hover:bg-teal/90 disabled:opacity-60"
+                    >
+                      {status === "sending" && decision === "approved" ? (
+                        "Publishing..."
+                      ) : (
+                        <>✓ Approve &amp; publish all {docs.length} files</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDecision("rejected")}
+                      disabled={status === "sending"}
+                      className="flex-1 rounded-lg border border-border py-2.5 text-sm font-medium text-ink transition hover:border-amber hover:text-amber disabled:opacity-60"
+                    >
+                      {status === "sending" && decision === "rejected"
+                        ? "Sending back..."
+                        : "Reject & regenerate"}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </main>

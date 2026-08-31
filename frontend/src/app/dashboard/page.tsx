@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, repos, type Repo, type GithubRepo } from "@/src/lib/api";
+import PipelineLoader from "@/src/components/PipelineLoader";
 
 const STATUS_STYLE: Record<
   string,
@@ -26,6 +27,7 @@ export default function DashboardPage() {
     email: string;
     github_username: string | null;
   } | null>(null);
+  const [runningRepoName, setRunningRepoName] = useState<string | null>(null);
   const [myRepos, setMyRepos] = useState<Repo[]>([]);
   const [githubRepos, setGithubRepos] = useState<GithubRepo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,11 +62,14 @@ export default function DashboardPage() {
         full_name: gh.full_name,
         default_branch: gh.default_branch,
       });
+      setShowPicker(false);
+      setRunningRepoName(connected.full_name);
       const { thread_id } = await repos.run(connected.id);
       router.push(`/review?thread=${thread_id}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to connect repo");
       setConnecting(null);
+      setRunningRepoName(null);
     }
   }
 
@@ -146,6 +151,7 @@ export default function DashboardPage() {
                     {repo.last_parsed_at ? (
                       <button
                         onClick={async () => {
+                          setRunningRepoName(repo.full_name);
                           try {
                             const { thread_id } = await repos.latestThread(
                               repo.id,
@@ -155,6 +161,7 @@ export default function DashboardPage() {
                             alert(
                               "Could not find the latest run for this repo.",
                             );
+                            setRunningRepoName(null);
                           }
                         }}
                         className="flex-1 rounded-lg border border-border py-2 text-center text-xs font-medium text-ink transition hover:border-muted-2"
@@ -164,6 +171,7 @@ export default function DashboardPage() {
                     ) : (
                       <button
                         onClick={async () => {
+                          setRunningRepoName(repo.full_name);
                           try {
                             const { thread_id } = await repos.run(repo.id);
                             router.push(`/review?thread=${thread_id}`);
@@ -173,6 +181,7 @@ export default function DashboardPage() {
                                 ? err.message
                                 : "Failed to run pipeline",
                             );
+                              setRunningRepoName(null);
                           }
                         }}
                         className="flex-1 rounded-lg bg-teal py-2 text-center text-xs font-medium text-bg transition hover:bg-teal/90"
@@ -245,6 +254,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      {runningRepoName && <PipelineLoader repoName={runningRepoName} />}
     </main>
   );
 }

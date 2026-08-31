@@ -3,6 +3,8 @@ from langchain_groq import ChatGroq
 from langchain.prompts import ChatPromptTemplate
 from graph.state import DevDocState
 from config import get_settings
+import asyncio
+from groq import RateLimitError
 
 settings = get_settings()
 
@@ -111,20 +113,35 @@ async def doc_generator_node(state: DevDocState) -> dict:
             print(f" Skipping errored module: {module.get('file_path')}")
             continue
 
+
+        # Build prompt
         print(f"🤖 Generating docs for: {module['file_path']}")
 
         # Build prompt
         chain = DOC_PROMPT | llm
 
-        response = await chain.ainvoke({
-            "file_path": module["file_path"],
-            "module_name": module["module_name"],
-            "docstring": module.get("docstring") or "No module docstring",
-            "classes": format_classes(module.get("classes", [])),
-            "functions": format_functions(module.get("functions", [])),
-            "imports": ", ".join(module.get("imports", [])) or "None",
-            "dev_notes_section": dev_notes_section,
-        })
+        max_retries = 3
+        response = None
+        for attempt in range(max_retries):
+            try:
+                response = await chain.ainvoke({
+                "file_path": module["file_path"],
+                "module_name": module["module_name"],
+                "docstring": module.get("docstring") or "No module docstring",
+                "classes": format_classes(module.get("classes", [])),
+                "functions": format_functions(module.get("functions", [])),
+                "imports": ", ".join(module.get("imports", [])) or "None",
+                "dev_notes_section": dev_notes_section,
+            })
+                break
+            except RateLimitError:
+                wait_time = 2 ** attempt
+                print(f"⏳ Rate limited, waiting {wait_time}s before retry...")
+                await asyncio.sleep(wait_time)
+
+        if response is None:
+            print(f"⚠️ Skipping {module['file_path']} after {max_retries} failed attempts")
+            continue
 
         generated_docs.append({
             "doc_id": str(uuid.uuid4()),
