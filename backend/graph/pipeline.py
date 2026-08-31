@@ -117,7 +117,7 @@ async def resume_pipeline(thread_id: str, review_status: str, dev_notes: str, do
     config = {"configurable": {"thread_id": thread_id}}
 
     # Inject human decision into the paused graph state
-    doc_graph.update_state(
+    doc_graph.aupdate_state(
         config,
         {
             "review_status": review_status,
