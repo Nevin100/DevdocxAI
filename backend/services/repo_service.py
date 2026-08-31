@@ -68,6 +68,7 @@ class RepoService:
         )
         db.add(pipeline_run)
         await db.flush()
+        await db.commit()
 
         initial_state = DevDocState(
             user_id=str(user.id),
