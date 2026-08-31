@@ -1,13 +1,12 @@
 import uuid
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from graph.state import DevDocState
-from db.models import Document, DocStatus
+from db.models import Document, DocStatus, Repository, RepoStatus
 from vectorstore.qdrant_store import store_document
 from db.database import async_session_local
 
-# This node is responsible for taking the enriched docs from the previous step and saving them to the database and vector store. It checks if a doc already exists for the given file path and repo, and either updates it or creates a new entry. After saving to the database, it also stores the document in Qdrant and saves the resulting vector ID back to the database.
+
 async def doc_publisher_node(state: DevDocState) -> dict:
     """
     LangGraph node — saves approved docs to PostgreSQL and Qdrant.
@@ -16,7 +15,9 @@ async def doc_publisher_node(state: DevDocState) -> dict:
     1. For each enriched doc
     2. Save to Document table with status=PUBLISHED
     3. Embed and store in Qdrant
-    4. Return published_doc_ids and vector_ids
+    4. Mark the Repository as completed with a last_parsed_at timestamp
+       so the dashboard reflects the real last-run state
+    5. Return published_doc_ids and vector_ids
     """
     print(f"📤 Publishing {len(state.enriched_docs)} docs")
 
@@ -25,7 +26,6 @@ async def doc_publisher_node(state: DevDocState) -> dict:
 
     async with async_session_local() as db:
         for doc in state.enriched_docs:
-            # Check if doc already exists for this file (update) or create new
             result = await db.execute(
                 select(Document).where(
                     Document.repo_id == uuid.UUID(state.repo_id),
@@ -35,13 +35,11 @@ async def doc_publisher_node(state: DevDocState) -> dict:
             existing = result.scalar_one_or_none()
 
             if existing:
-                # Update existing doc
                 existing.content = doc["content"]
                 existing.status = DocStatus.PUBLISHED
                 existing.dev_notes = state.dev_notes or None
                 db_doc = existing
             else:
-                # Create new doc
                 db_doc = Document(
                     id=uuid.UUID(doc["doc_id"]),
                     repo_id=uuid.UUID(state.repo_id),
@@ -55,7 +53,6 @@ async def doc_publisher_node(state: DevDocState) -> dict:
 
             await db.flush()
 
-            # Store in Qdrant vector store
             vector_id = await store_document(
                 doc_id=str(db_doc.id),
                 content=doc["content"],
@@ -66,12 +63,23 @@ async def doc_publisher_node(state: DevDocState) -> dict:
                 }
             )
 
-            # Save vector ID back to DB
             db_doc.vector_id = vector_id
 
             published_doc_ids.append(str(db_doc.id))
             vector_ids.append(vector_id)
-            print(f"Published: {doc['file_path']}")
+            print(f"✅ Published: {doc['file_path']}")
+
+        # Mark the repo itself as completed with a fresh timestamp —
+        # this is what makes the dashboard show "Docs live" and
+        # "Last parsed X ago" instead of "Waiting for first run".
+        repo_result = await db.execute(
+            select(Repository).where(Repository.id == uuid.UUID(state.repo_id))
+        )
+        repo = repo_result.scalar_one_or_none()
+        if repo:
+            repo.status = RepoStatus.COMPLETED
+            from datetime import datetime
+            repo.last_parsed_at = datetime.utcnow()
 
         await db.commit()
 

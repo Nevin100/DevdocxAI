@@ -1,5 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg_pool import AsyncConnectionPool
+
 from graph.state import DevDocState
 from graph.hitl import hitl_review_node, should_publish
 from agents.codebase_parser import codebase_parser_node
@@ -11,7 +13,8 @@ from config import get_settings
 
 settings = get_settings()
 
-# Main doc pipeline
+
+# ── Main doc pipeline ─────────────────────────────────────────────────────────
 def build_doc_pipeline() -> StateGraph:
     """
     Main documentation pipeline graph.
@@ -26,26 +29,23 @@ def build_doc_pipeline() -> StateGraph:
     """
     builder = StateGraph(DevDocState)
 
-    # Add all nodes
     builder.add_node("codebase_parser", codebase_parser_node)
     builder.add_node("doc_generator", doc_generator_node)
     builder.add_node("brave_researcher", brave_researcher_node)
     builder.add_node("human_review", hitl_review_node)
     builder.add_node("doc_publisher", doc_publisher_node)
 
-    # Fixed edges — always follow this order
     builder.add_edge(START, "codebase_parser")
     builder.add_edge("codebase_parser", "doc_generator")
     builder.add_edge("doc_generator", "brave_researcher")
     builder.add_edge("brave_researcher", "human_review")
 
-    # Conditional edge after HITL — approved or rejected
     builder.add_conditional_edges(
         "human_review",
         should_publish,
         {
             "doc_publisher": "doc_publisher",
-            "doc_generator": "doc_generator",   
+            "doc_generator": "doc_generator",   # retry loop on rejection
             "__end__": END,
         }
     )
@@ -53,7 +53,8 @@ def build_doc_pipeline() -> StateGraph:
     builder.add_edge("doc_publisher", END)
     return builder
 
-# Parallel chatbot pipeline 
+
+# ── Parallel chatbot pipeline ─────────────────────────────────────────────────
 def build_chatbot_pipeline() -> StateGraph:
     """
     Onboarding chatbot — runs independently from the doc pipeline.
@@ -65,12 +66,17 @@ def build_chatbot_pipeline() -> StateGraph:
     builder.add_edge("onboarding_chatbot", END)
     return builder
 
-# Compile with PostgreSQL checkpointer
-_checkpointer_cm = None
-_checkpointer = None
+
+# ── Compile with PostgreSQL checkpointer (pooled connection) ──────────────────
+# A single long-lived connection gets closed by Neon after a period of
+# idleness, causing "the connection is closed" errors on the next run.
+# A connection pool reconnects automatically, so this survives idle gaps.
+_pool: AsyncConnectionPool | None = None
+_checkpointer: AsyncPostgresSaver | None = None
+
 
 async def get_compiled_pipeline():
-    global _checkpointer_cm, _checkpointer
+    global _pool, _checkpointer
 
     if _checkpointer is None:
         psycopg_url = (
@@ -79,8 +85,15 @@ async def get_compiled_pipeline():
             .replace("?ssl=require", "?sslmode=require")
         )
 
-        _checkpointer_cm = AsyncPostgresSaver.from_conn_string(psycopg_url)
-        _checkpointer = await _checkpointer_cm.__aenter__()
+        _pool = AsyncConnectionPool(
+            conninfo=psycopg_url,
+            max_size=10,
+            kwargs={"autocommit": True},
+            open=False,
+        )
+        await _pool.open()
+
+        _checkpointer = AsyncPostgresSaver(_pool)
         await _checkpointer.setup()
 
     doc_graph = build_doc_pipeline().compile(
@@ -94,7 +107,8 @@ async def get_compiled_pipeline():
 
     return doc_graph, chatbot_graph
 
-# Run helpers 
+
+# ── Run helpers ───────────────────────────────────────────────────────────────
 async def run_pipeline(state: DevDocState, doc_graph):
     """
     Start a new pipeline run.
@@ -105,9 +119,10 @@ async def run_pipeline(state: DevDocState, doc_graph):
 
     async for event in doc_graph.astream(state.model_dump(), config=config):
         node_name = list(event.keys())[0]
-        print(f"Node complete: {node_name}")
+        print(f"✅ Node complete: {node_name}")
 
     return config
+
 
 async def resume_pipeline(thread_id: str, review_status: str, dev_notes: str, doc_graph):
     """
@@ -116,8 +131,8 @@ async def resume_pipeline(thread_id: str, review_status: str, dev_notes: str, do
     """
     config = {"configurable": {"thread_id": thread_id}}
 
-    # Inject human decision into the paused graph state
-    doc_graph.aupdate_state(
+    # NOTE: must be awaited — aupdate_state is async
+    await doc_graph.aupdate_state(
         config,
         {
             "review_status": review_status,
@@ -126,7 +141,6 @@ async def resume_pipeline(thread_id: str, review_status: str, dev_notes: str, do
         as_node="human_review"
     )
 
-    # Resume from where it paused
     async for event in doc_graph.astream(None, config=config):
         node_name = list(event.keys())[0]
-        print(f" Resumed node: {node_name}")
+        print(f"✅ Resumed node: {node_name}")
