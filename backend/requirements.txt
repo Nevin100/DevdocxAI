@@ -28,6 +28,7 @@ langchain==0.3.1
 langchain-groq==0.2.0
 langchain-cohere==0.3.0
 langsmith==0.1.129
+langchain_huggingface==0.1.2
 
 # Vector DB
 qdrant-client==1.11.3
@@ -46,4 +47,3 @@ PyGithub==2.4.0
 
 # Embeddings Model:
 sentence-transformers==3.0.1
-langchain-huggingface==0.0.3

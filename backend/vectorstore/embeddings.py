@@ -1,10 +1,5 @@
-from langchain_cohere import CohereEmbeddings
-from config import get_settings
+from langchain_huggingface import HuggingFaceEmbeddings
 
-settings = get_settings()
-
-# Cohere embeddings — used for storing and searching docs in Qdrant
-embeddings = CohereEmbeddings(
-    cohere_api_key=settings.COHERE_API_KEY,
-    model=settings.COHERE_EMBED_MODEL,
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
