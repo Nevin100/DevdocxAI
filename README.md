@@ -11,7 +11,7 @@
 
 ---
 
-## 🚨 The Problem
+## 🚨 The Problem:
 
 Every engineering team has the same dirty secret — **the docs are lying.**
 
