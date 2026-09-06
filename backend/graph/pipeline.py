@@ -88,9 +88,14 @@ async def get_compiled_pipeline():
         _pool = AsyncConnectionPool(
             conninfo=psycopg_url,
             max_size=10,
+            min_size=1,
             kwargs={"autocommit": True},
             open=False,
+            check=AsyncConnectionPool.check_connection,   # ← yeh add karo
+            max_idle=60,       # ← idle connections 60s baad recycle karo
+            reconnect_timeout=10,
         )
+    
         await _pool.open()
 
         _checkpointer = AsyncPostgresSaver(_pool)

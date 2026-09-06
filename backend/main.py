@@ -2,6 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from vectorstore.qdrant_store import ensure_collection_exists
 
 from config import get_settings
 from db.database import init_db
@@ -28,6 +29,9 @@ async def lifespan(app: FastAPI):
     #init db :
     await init_db()
     print("Database initialized.. Tables created..")
+
+    await ensure_collection_exists()
+    
     yield
 
     print(f"Shutting down {settings.APP_NAME} v{settings.APP_VERSION}")

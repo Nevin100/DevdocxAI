@@ -1,14 +1,13 @@
 import uuid
 from qdrant_client import QdrantClient, AsyncQdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct
+from qdrant_client.models import Distance, VectorParams, PointStruct, PayloadSchemaType
 from vectorstore.embeddings import embeddings
 from config import get_settings
 
 settings = get_settings()
 
-# Cohere embed-english-v3.0 produces 1024-dim vectors
-VECTOR_SIZE = 1024
-
+# Huggingface embed (sentence transformers) produces 384-dim vectors
+VECTOR_SIZE = 384
 
 def get_qdrant_client() -> QdrantClient:
     """Sync Qdrant client"""
@@ -17,14 +16,12 @@ def get_qdrant_client() -> QdrantClient:
         api_key=settings.QDRANT_API_KEY or None,
     )
 
-
 def get_async_qdrant_client() -> AsyncQdrantClient:
     """Async Qdrant client — use in FastAPI routes"""
     return AsyncQdrantClient(
         url=settings.QDRANT_URL,
         api_key=settings.QDRANT_API_KEY or None,
     )
-
 
 async def ensure_collection_exists():
     """
@@ -44,11 +41,20 @@ async def ensure_collection_exists():
             )
         )
         print(f"✅ Qdrant collection created: {settings.QDRANT_COLLECTION_NAME}")
+
+        # Create an index on repo_id so we can filter searches by it —
+        # Qdrant Cloud requires this explicitly (unlike some local setups).
+        await client.create_payload_index(
+            collection_name=settings.QDRANT_COLLECTION_NAME,
+            field_name="repo_id",
+            field_schema=PayloadSchemaType.KEYWORD,
+        )
+        print("✅ Index created on repo_id")
+
     else:
         print(f"✅ Qdrant collection exists: {settings.QDRANT_COLLECTION_NAME}")
 
     await client.close()
-
 
 async def store_document(doc_id: str, content: str, metadata: dict) -> str:
     """
@@ -71,7 +77,6 @@ async def store_document(doc_id: str, content: str, metadata: dict) -> str:
             "content": content[:1000],   # store first 1000 chars for retrieval context
         }
     )
-
     await client.upsert(
         collection_name=settings.QDRANT_COLLECTION_NAME,
         points=[point]
@@ -79,7 +84,6 @@ async def store_document(doc_id: str, content: str, metadata: dict) -> str:
 
     await client.close()
     return str(point.id)
-
 
 async def search_documents(query: str, repo_id: str, top_k: int = 5) -> list[dict]:
     """
@@ -104,7 +108,6 @@ async def search_documents(query: str, repo_id: str, top_k: int = 5) -> list[dic
     )
 
     await client.close()
-
     return [
         {
             "score": hit.score,

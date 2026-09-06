@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { chat } from "@/src/lib/api";
+import ReactMarkdown from "react-markdown";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -13,6 +15,9 @@ const SUGGESTIONS = [
 ];
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
+  const repoId = searchParams.get("repo");
+
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -26,22 +31,40 @@ export default function ChatPage() {
 
   async function send(query: string) {
     if (!query.trim() || loading) return;
+
+    if (!repoId) {
+      setMessages((m) => [
+        ...m,
+        {
+          role: "assistant",
+          content:
+            "No repo selected — open this page from a repo's 'Ask a question' button.",
+        },
+      ]);
+      return;
+    }
+
     setMessages((m) => [...m, { role: "user", content: query }]);
     setInput("");
     setLoading(true);
 
     try {
-      // TODO: pass the real connected repo_id once repo selection exists.
-      const { chat_response } = await chat.ask("sample-repo-id", query);
+      const { chat_response } = await chat.ask(repoId, query);
       setMessages((m) => [...m, { role: "assistant", content: chat_response }]);
     } catch {
       setMessages((m) => [
         ...m,
-        { role: "assistant", content: "Couldn't reach the pipeline. Try again in a moment." },
+        {
+          role: "assistant",
+          content: "Couldn't reach the pipeline. Try again in a moment.",
+        },
       ]);
     } finally {
       setLoading(false);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      setTimeout(
+        () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+        50,
+      );
     }
   }
 
@@ -53,7 +76,9 @@ export default function ChatPage() {
             <span className="h-2 w-2 rounded-full bg-teal" />
             <span className="font-display text-lg font-semibold">DevDocAI</span>
           </Link>
-          <span className="font-mono text-xs text-muted">onboarding_chatbot</span>
+          <span className="font-mono text-xs text-muted">
+            onboarding_chatbot
+          </span>
         </div>
       </header>
 
@@ -71,7 +96,13 @@ export default function ChatPage() {
                     : "border border-border bg-surface text-ink"
                 }`}
               >
-                {msg.content}
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-headings:my-2 prose-headings:font-display prose-code:rounded prose-code:bg-bg prose-code:px-1 prose-code:py-0.5 prose-code:text-teal prose-pre:bg-bg prose-pre:border prose-pre:border-border prose-table:text-xs prose-th:text-muted prose-strong:text-ink prose-a:text-teal">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  msg.content
+                )}
               </div>
             </div>
           ))}
